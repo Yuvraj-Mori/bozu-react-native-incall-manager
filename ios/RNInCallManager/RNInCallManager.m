@@ -52,8 +52,10 @@
 
     NSString *_incallAudioMode;
     NSString *_incallAudioCategory;
+    NSUInteger _incallAudioCategoryOptions;
     NSString *_origAudioCategory;
     NSString *_origAudioMode;
+    NSUInteger _origAudioCategoryOptions;
     BOOL _audioSessionInitialized;
     int _forceSpeakerOn;
     NSString *_media;
@@ -100,6 +102,8 @@ RCT_EXPORT_MODULE(InCallManager)
 
         _incallAudioMode = AVAudioSessionModeVoiceChat;
         _incallAudioCategory = AVAudioSessionCategoryPlayAndRecord;
+        _incallAudioCategoryOptions = AVAudioSessionCategoryOptionMixWithOthers;
+        
         _origAudioCategory = nil;
         _origAudioMode = nil;
         _audioSessionInitialized = NO;
@@ -138,12 +142,12 @@ RCT_EXPORT_METHOD(start:(NSString *)mediaType
     } else {
         _incallAudioMode = AVAudioSessionModeVoiceChat;
     }
-    NSLog(@"RNInCallManager.start() start InCallManager. media=%@, type=%@, mode=%@", _media, _media, _incallAudioMode);
+    NSLog(@"RNInCallManager.start() start InCallManager. media=%@, type=%@, mode=%@, options=%lu", _media, _media, _incallAudioMode, (unsigned long)_incallAudioCategoryOptions);
     [self storeOriginalAudioSetup];
     _forceSpeakerOn = 0;
     [self startAudioSessionNotification];
     [self audioSessionSetCategory:_incallAudioCategory
-                          options:0
+                          options:_incallAudioCategoryOptions
                        callerMemo:NSStringFromSelector(_cmd)];
     [self audioSessionSetMode:_incallAudioMode
                    callerMemo:NSStringFromSelector(_cmd)];
@@ -319,7 +323,7 @@ RCT_EXPORT_METHOD(startRingback:(NSString *)_ringbackUriType)
 
         //self.audioSessionSetCategory(self.incallAudioCategory, [.DefaultToSpeaker, .AllowBluetooth], #function)
         [self audioSessionSetCategory:_incallAudioCategory
-                              options:0
+                              options:_incallAudioCategoryOptions
                            callerMemo:NSStringFromSelector(_cmd)];
         [self audioSessionSetMode:_incallAudioMode
                        callerMemo:NSStringFromSelector(_cmd)];
@@ -439,7 +443,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 
 - (void)updateAudioRoute
 {
-    NSLog(@"RNInCallManager.updateAudioRoute(): [Enter] forceSpeakerOn flag=%d media=%@ category=%@ mode=%@", _forceSpeakerOn, _media, _audioSession.category, _audioSession.mode);
+    NSLog(@"RNInCallManager.updateAudioRoute(): [Enter] forceSpeakerOn flag=%d media=%@ category=%@ mode=%@, options=%lu", _forceSpeakerOn, _media, _audioSession.category, _audioSession.mode, (unsigned long)_audioSession.categoryOptions);
     //self.debugAudioSession()
 
     //AVAudioSessionPortOverride overrideAudioPort;
@@ -493,13 +497,22 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 
     if (![_audioSession.category isEqualToString:_incallAudioCategory]) {
         [self audioSessionSetCategory:_incallAudioCategory
-                              options:0
+                              options:_incallAudioCategoryOptions
                            callerMemo:NSStringFromSelector(_cmd)];
         NSLog(@"RNInCallManager.updateAudioRoute() audio category has changed to %@", _incallAudioCategory);
     } else {
         NSLog(@"RNInCallManager.updateAudioRoute() did NOT change audio category");
     }
 
+    if ([_audioSession.category isEqualToString:_incallAudioCategory] && _audioSession.categoryOptions != _incallAudioCategoryOptions ) {
+        [self audioSessionSetCategory:_incallAudioCategory
+                              options:_incallAudioCategoryOptions
+                           callerMemo:NSStringFromSelector(_cmd)];
+        NSLog(@"RNInCallManager.updateAudioRoute() audio [category options] has changed to %lu", (unsigned long)_incallAudioCategoryOptions);
+    } else {
+        NSLog(@"RNInCallManager.updateAudioRoute() did NOT change audio [category options]");
+    }
+    
     if (audioMode.length > 0 && ![_audioSession.mode isEqualToString:audioMode]) {
         [self audioSessionSetMode:audioMode
                        callerMemo:NSStringFromSelector(_cmd)];
@@ -559,7 +572,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 
         //self.audioSessionSetCategory(self.incallAudioCategory, [.DefaultToSpeaker, .AllowBluetooth], #function)
         [self audioSessionSetCategory:_incallAudioCategory
-                              options:0
+                              options:_incallAudioCategoryOptions
                            callerMemo:NSStringFromSelector(_cmd)];
         [self audioSessionSetMode:_incallAudioMode
                        callerMemo:NSStringFromSelector(_cmd)];
@@ -640,16 +653,17 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 
 - (void)storeOriginalAudioSetup
 {
-    NSLog(@"RNInCallManager.storeOriginalAudioSetup(): origAudioCategory=%@, origAudioMode=%@", _audioSession.category, _audioSession.mode);
+    NSLog(@"RNInCallManager.storeOriginalAudioSetup(): origAudioCategory=%@, origAudioMode=%@,  origAudioCategoryOptions=%lu", _audioSession.category, _audioSession.mode, (unsigned long)_audioSession.categoryOptions);
     _origAudioCategory = _audioSession.category;
     _origAudioMode = _audioSession.mode;
+    _origAudioCategoryOptions = _audioSession.categoryOptions;
 }
 
 - (void)restoreOriginalAudioSetup
 {
-    NSLog(@"RNInCallManager.restoreOriginalAudioSetup(): origAudioCategory=%@, origAudioMode=%@", _audioSession.category, _audioSession.mode);
+    NSLog(@"RNInCallManager.restoreOriginalAudioSetup(): origAudioCategory=%@, origAudioMode=%@,  origAudioCategoryOptions=%lu", _audioSession.category, _audioSession.mode, (unsigned long)_audioSession.categoryOptions);
     [self audioSessionSetCategory:_origAudioCategory
-                          options:0
+                          options:_origAudioCategoryOptions
                        callerMemo:NSStringFromSelector(_cmd)];
     [self audioSessionSetMode:_origAudioMode
                    callerMemo:NSStringFromSelector(_cmd)];
@@ -835,7 +849,7 @@ RCT_EXPORT_METHOD(stopProximitySensor)
                     }
                     break;
                 case AVAudioSessionRouteChangeReasonCategoryChange:
-                    NSLog(@"RNInCallManager.AudioRouteChange.Reason: CategoryChange. category=%@ mode=%@", self->_audioSession.category, self->_audioSession.mode);
+                    NSLog(@"RNInCallManager.AudioRouteChange.Reason: CategoryChange. category=%@ mode=%@, options=%lu", self->_audioSession.category, self->_audioSession.mode, (unsigned long)self->_audioSession.categoryOptions);
                     [self updateAudioRoute];
                     break;
                 case AVAudioSessionRouteChangeReasonOverride:
@@ -848,7 +862,7 @@ RCT_EXPORT_METHOD(stopProximitySensor)
                     NSLog(@"RNInCallManager.AudioRouteChange.Reason: NoSuitableRouteForCategory");
                     break;
                 case AVAudioSessionRouteChangeReasonRouteConfigurationChange:
-                    NSLog(@"RNInCallManager.AudioRouteChange.Reason: RouteConfigurationChange. category=%@ mode=%@", self->_audioSession.category, self->_audioSession.mode);
+                    NSLog(@"RNInCallManager.AudioRouteChange.Reason: RouteConfigurationChange. category=%@ mode=%@  options=%lu", self->_audioSession.category, self->_audioSession.mode, (unsigned long)self->_audioSession.categoryOptions);
                     break;
                 default:
                     NSLog(@"RNInCallManager.AudioRouteChange.Reason: Unknow Value");
