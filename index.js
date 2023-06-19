@@ -30,11 +30,11 @@ class InCallManager {
     }
 
     turnScreenOff() {
-        _InCallManager.turnScreenOff();
+        // _InCallManager.turnScreenOff();
     }
 
     turnScreenOn() {
-        _InCallManager.turnScreenOn();
+        // _InCallManager.turnScreenOn();
     }
 
     async getIsWiredHeadsetPluggedIn() {
@@ -148,6 +148,14 @@ class InCallManager {
     async chooseAudioRoute(route) {
         let result = await _InCallManager.chooseAudioRoute(route);
         return result;
+    }
+
+    async getSelectedAudioDeviceString() {
+        if (Platform.OS === 'android') {
+            return await _InCallManager.getSelectedAudioDeviceString();
+        } else {
+            console.log("ios doesn't support getSelectedAudioDeviceString()");
+        }
     }
 
     async requestAudioFocus() {
