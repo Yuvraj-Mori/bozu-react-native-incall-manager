@@ -495,16 +495,16 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
         NSLog(@"RNInCallManager.updateAudioRoute(): did NOT overrideOutputAudioPort()");
     }
 
-    if (![_audioSession.category isEqualToString:_incallAudioCategory]) {
-        [self audioSessionSetCategory:_incallAudioCategory
-                              options:_incallAudioCategoryOptions
-                           callerMemo:NSStringFromSelector(_cmd)];
-        NSLog(@"RNInCallManager.updateAudioRoute() audio category has changed to %@", _incallAudioCategory);
-    } else {
-        NSLog(@"RNInCallManager.updateAudioRoute() did NOT change audio category");
-    }
-
-    if ([_audioSession.category isEqualToString:_incallAudioCategory] && _audioSession.categoryOptions != _incallAudioCategoryOptions ) {
+    // if (![_audioSession.category isEqualToString:_incallAudioCategory]) {
+    //     [self audioSessionSetCategory:_incallAudioCategory
+    //                           options:_incallAudioCategoryOptions
+    //                        callerMemo:NSStringFromSelector(_cmd)];
+    //     NSLog(@"RNInCallManager.updateAudioRoute() audio category has changed to %@", _incallAudioCategory);
+    // } else {
+    //     NSLog(@"RNInCallManager.updateAudioRoute() did NOT change audio category");
+    // }
+    NSLog(@"RNInCallManager.updateAudioRoute() audiocategory option includes mixmode %lu", _audioSession.categoryOptions & _incallAudioCategoryOptions);
+    if ([_audioSession.category isEqualToString:_incallAudioCategory] && !(_audioSession.categoryOptions & _incallAudioCategoryOptions)) {
         [self audioSessionSetCategory:_incallAudioCategory
                               options:_incallAudioCategoryOptions
                            callerMemo:NSStringFromSelector(_cmd)];
@@ -609,10 +609,11 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
     @try {
         if (options != 0) {
             [_audioSession setCategory:audioCategory
-                           withOptions:options
+                           withOptions:options | AVAudioSessionCategoryOptionAllowBluetooth
                                  error:nil];
         } else {
             [_audioSession setCategory:audioCategory
+                                withOptions:AVAudioSessionCategoryOptionAllowBluetooth
                                  error:nil];
         }
         NSLog(@"RNInCallManager.%@: audioSession.setCategory: %@, withOptions: %lu success", callerMemo, audioCategory, (unsigned long)options);
