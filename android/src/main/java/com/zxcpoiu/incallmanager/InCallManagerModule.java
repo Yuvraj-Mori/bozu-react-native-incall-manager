@@ -65,9 +65,10 @@
  
  import com.zxcpoiu.incallmanager.AppRTC.AppRTCBluetoothManager;
  
- public class InCallManagerModule extends ReactContextBaseJavaModule implements LifecycleEventListener, AudioManager.OnAudioFocusChangeListener {
+ public class InCallManagerModule extends ReactContextBaseJavaModule
+         implements LifecycleEventListener, AudioManager.OnAudioFocusChangeListener {
      private static final String REACT_NATIVE_MODULE_NAME = "InCallManager";
-     private static final String TAG = REACT_NATIVE_MODULE_NAME+" AppRTCBluetoothManager";
+     private static final String TAG = REACT_NATIVE_MODULE_NAME + " AppRTCBluetoothManager";
      private String mPackageName = "com.zxcpoiu.incallmanager";
  
      // --- Screen Manager
@@ -79,7 +80,7 @@
      private AudioManager audioManager;
      private boolean audioManagerActivated = false;
      private boolean isAudioFocused = false;
-     //private final Object mAudioFocusLock = new Object();
+     // private final Object mAudioFocusLock = new Object();
      private boolean isOrigAudioSetupStored = false;
      private boolean origIsSpeakerPhoneOn = false;
      private boolean origIsMicrophoneMute = false;
@@ -90,18 +91,22 @@
      private boolean automatic = true;
      private boolean isProximityRegistered = false;
      private boolean proximityIsNear = false;
-     private static final String ACTION_HEADSET_PLUG = (android.os.Build.VERSION.SDK_INT >= 21) ? AudioManager.ACTION_HEADSET_PLUG : Intent.ACTION_HEADSET_PLUG;
+     private static final String ACTION_HEADSET_PLUG = (android.os.Build.VERSION.SDK_INT >= 21)
+             ? AudioManager.ACTION_HEADSET_PLUG
+             : Intent.ACTION_HEADSET_PLUG;
      private BroadcastReceiver wiredHeadsetReceiver;
      private BroadcastReceiver noisyAudioReceiver;
      private BroadcastReceiver mediaButtonReceiver;
      private AudioAttributes mAudioAttributes;
      private AudioFocusRequest mAudioFocusRequest;
  
-     // --- same as: RingtoneManager.getActualDefaultRingtoneUri(reactContext, RingtoneManager.TYPE_RINGTONE);
+     // --- same as: RingtoneManager.getActualDefaultRingtoneUri(reactContext,
+     // RingtoneManager.TYPE_RINGTONE);
      private Uri defaultRingtoneUri = Settings.System.DEFAULT_RINGTONE_URI;
      private Uri defaultRingbackUri = Settings.System.DEFAULT_RINGTONE_URI;
      private Uri defaultBusytoneUri = Settings.System.DEFAULT_NOTIFICATION_URI;
-     //private Uri defaultAlarmAlertUri = Settings.System.DEFAULT_ALARM_ALERT_URI; // --- too annoying
+     // private Uri defaultAlarmAlertUri = Settings.System.DEFAULT_ALARM_ALERT_URI;
+     // // --- too annoying
      private Uri bundleRingtoneUri;
      private Uri bundleRingbackUri;
      private Uri bundleBusytoneUri;
@@ -120,7 +125,9 @@
       * AudioDevice is the names of possible audio devices that we currently
       * support.
       */
-     public enum AudioDevice { SPEAKER_PHONE, WIRED_HEADSET, EARPIECE, BLUETOOTH, NONE }
+     public enum AudioDevice {
+         SPEAKER_PHONE, WIRED_HEADSET, EARPIECE, BLUETOOTH, NONE
+     }
  
      /** AudioManager state. */
      public enum AudioManagerState {
@@ -167,7 +174,9 @@
  
      interface MyPlayerInterface {
          public boolean isPlaying();
+ 
          public void startPlay(Map<String, Object> data);
+ 
          public void stopPlay();
      }
  
@@ -212,7 +221,9 @@
                  Window window = mCurrentActivity.getWindow();
                  WindowManager.LayoutParams params = window.getAttributes();
                  lastLayoutParams = params; // --- store last param
-                 params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_OFF; // --- Dim as dark as possible. see BRIGHTNESS_OVERRIDE_OFF
+                 params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_OFF; // --- Dim as dark as
+                                                                                               // possible. see
+                                                                                               // BRIGHTNESS_OVERRIDE_OFF
                  window.setAttributes(params);
                  window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
              }
@@ -343,7 +354,7 @@
                  @Override
                  public void onReceive(Context context, Intent intent) {
                      if (Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction())) {
-                         KeyEvent event = (KeyEvent)intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                         KeyEvent event = (KeyEvent) intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
                          int keyCode = event.getKeyCode();
                          String keyText = "";
                          switch (keyCode) {
@@ -426,7 +437,8 @@
              Log.d(TAG, "Proximity Sensor is already registered.");
              return;
          }
-         // --- SENSOR_DELAY_FASTEST(0 milisecs), SENSOR_DELAY_GAME(20 milisecs), SENSOR_DELAY_UI(60 milisecs), SENSOR_DELAY_NORMAL(200 milisecs)
+         // --- SENSOR_DELAY_FASTEST(0 milisecs), SENSOR_DELAY_GAME(20 milisecs),
+         // SENSOR_DELAY_UI(60 milisecs), SENSOR_DELAY_NORMAL(200 milisecs)
          if (!proximityManager.start()) {
              Log.d(TAG, "proximityManager.start() failed. return false");
              return;
@@ -493,45 +505,48 @@
      }
  
      /*
-         // --- TODO: AudioDeviceCallBack android sdk 23+
-         if (android.os.Build.VERSION.SDK_INT >= 23) {
-             private class MyAudioDeviceCallback extends AudioDeviceCallback {
-                 public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
-                     mAddCallbackCalled = true;
-                 }
-                 public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
-                     mRemoveCallbackCalled = true;
-                 }
-             }
- 
-             // --- Specifies the Handler object for the thread on which to execute the callback. If null, the Handler associated with the main Looper will be used.
-             public void test_deviceCallback() {
-                 AudioDeviceCallback callback =  new EmptyDeviceCallback();
-                 mAudioManager.registerAudioDeviceCallback(callback, null);
-             }
- 
-             // --- get all audio devices by flags
-             //public AudioDeviceInfo[] getDevices (int flags)
-             //Returns an array of AudioDeviceInfo objects corresponding to the audio devices currently connected to the system and meeting the criteria specified in the flags parameter.
-             //flags    int: A set of bitflags specifying the criteria to test.
-         }
- 
-         // --- TODO: adjust valume if needed.
-         if (android.os.Build.VERSION.SDK_INT >= 21) {
-             isVolumeFixed ()
- 
-             // The following APIs have no effect when volume is fixed:
-             adjustVolume(int, int)
-             adjustSuggestedStreamVolume(int, int, int)
-             adjustStreamVolume(int, int, int)
-             setStreamVolume(int, int, int)
-             setRingerMode(int)
-             setStreamSolo(int, boolean)
-             setStreamMute(int, boolean)
-         }
- 
-         // -- TODO: bluetooth support
-     */
+      * // --- TODO: AudioDeviceCallBack android sdk 23+
+      * if (android.os.Build.VERSION.SDK_INT >= 23) {
+      * private class MyAudioDeviceCallback extends AudioDeviceCallback {
+      * public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
+      * mAddCallbackCalled = true;
+      * }
+      * public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
+      * mRemoveCallbackCalled = true;
+      * }
+      * }
+      * 
+      * // --- Specifies the Handler object for the thread on which to execute the
+      * callback. If null, the Handler associated with the main Looper will be used.
+      * public void test_deviceCallback() {
+      * AudioDeviceCallback callback = new EmptyDeviceCallback();
+      * mAudioManager.registerAudioDeviceCallback(callback, null);
+      * }
+      * 
+      * // --- get all audio devices by flags
+      * //public AudioDeviceInfo[] getDevices (int flags)
+      * //Returns an array of AudioDeviceInfo objects corresponding to the audio
+      * devices currently connected to the system and meeting the criteria specified
+      * in the flags parameter.
+      * //flags int: A set of bitflags specifying the criteria to test.
+      * }
+      * 
+      * // --- TODO: adjust valume if needed.
+      * if (android.os.Build.VERSION.SDK_INT >= 21) {
+      * isVolumeFixed ()
+      * 
+      * // The following APIs have no effect when volume is fixed:
+      * adjustVolume(int, int)
+      * adjustSuggestedStreamVolume(int, int, int)
+      * adjustStreamVolume(int, int, int)
+      * setStreamVolume(int, int, int)
+      * setRingerMode(int)
+      * setStreamSolo(int, boolean)
+      * setStreamMute(int, boolean)
+      * }
+      * 
+      * // -- TODO: bluetooth support
+      */
  
      private void sendEvent(final String eventName, @Nullable WritableMap params) {
          try {
@@ -544,7 +559,8 @@
                  Log.e(TAG, "sendEvent(): reactContext is null or not having CatalystInstance yet.");
              }
          } catch (RuntimeException e) {
-             Log.e(TAG, "sendEvent(): java.lang.RuntimeException: Trying to invoke JS before CatalystInstance has been set!");
+             Log.e(TAG,
+                     "sendEvent(): java.lang.RuntimeException: Trying to invoke JS before CatalystInstance has been set!");
          }
      }
  
@@ -572,8 +588,9 @@
              UiThreadUtil.runOnUiThread(() -> {
                  bluetoothManager.start();
              });
-             // TODO: even if not acquired focus, we can still play sounds. but need figure out which is better.
-             //getCurrentActivity().setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
+             // TODO: even if not acquired focus, we can still play sounds. but need figure
+             // out which is better.
+             // getCurrentActivity().setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
              audioManager.setMode(defaultAudioMode);
 
              /** below line is commented because this is handled manually for init
@@ -632,7 +649,8 @@
          startWiredHeadsetEvent();
          startNoisyAudioEvent();
          startMediaButtonEvent();
-         startProximitySensor(); // --- proximity event always enable, but only turn screen off when audio is routing to earpiece.
+         startProximitySensor(); // --- proximity event always enable, but only turn screen off when audio is
+                                 // routing to earpiece.
          setKeepScreenOn(true);
      }
  
@@ -706,7 +724,8 @@
              return "";
          }
  
-         int requestAudioFocusRes = audioManager.requestAudioFocus(this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+         int requestAudioFocusRes = audioManager.requestAudioFocus(this, AudioManager.STREAM_VOICE_CALL,
+                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
  
          String requestAudioFocusResStr;
          switch (requestAudioFocusRes) {
@@ -800,7 +819,8 @@
  
          if (android.os.Build.VERSION.SDK_INT >= 23) {
              isDeviceIdleMode = String.format("%s", mPowerManager.isDeviceIdleMode());
-             isIgnoringBatteryOptimizations = String.format("%s", mPowerManager.isIgnoringBatteryOptimizations(mPackageName));
+             isIgnoringBatteryOptimizations = String.format("%s",
+                     mPowerManager.isIgnoringBatteryOptimizations(mPackageName));
          }
          if (android.os.Build.VERSION.SDK_INT >= 21) {
              isPowerSaveMode = String.format("%s", mPowerManager.isPowerSaveMode());
@@ -827,7 +847,9 @@
          } else {
              isInteractive = String.format("%s", mPowerManager.isScreenOn());
          }
-         Log.d(TAG, String.format("debugScreenPowerState(): screenState='%s', isInteractive='%s', isPowerSaveMode='%s', isDeviceIdleMode='%s', isIgnoringBatteryOptimizations='%s'", screenState, isInteractive, isPowerSaveMode, isDeviceIdleMode, isIgnoringBatteryOptimizations));
+         Log.d(TAG, String.format(
+                 "debugScreenPowerState(): screenState='%s', isInteractive='%s', isPowerSaveMode='%s', isDeviceIdleMode='%s', isIgnoringBatteryOptimizations='%s'",
+                 screenState, isInteractive, isPowerSaveMode, isDeviceIdleMode, isIgnoringBatteryOptimizations));
      }
  
      @ReactMethod
@@ -872,11 +894,13 @@
          });
      }
  
-     boolean allowManualSpeaker = false; // for getPreferredAudioDevice() to decide weather userSelectedAudioDevice should choose for SPEAKER
+     boolean allowManualSpeaker = false; // for getPreferredAudioDevice() to decide weather userSelectedAudioDevice
+                                         // should choose for SPEAKER
+ 
      @ReactMethod
      public void setSpeakerphoneOn(final boolean enable) {
          allowManualSpeaker = true;
-         if (enable != audioManager.isSpeakerphoneOn())  {
+         if (enable != audioManager.isSpeakerphoneOn()) {
              Log.d(TAG, "setSpeakerphoneOn(): " + enable);
              audioManager.setMode(defaultAudioMode);
              audioManager.setSpeakerphoneOn(enable);
@@ -886,7 +910,8 @@
          }
      }
  
-     // --- TODO (zxcpoiu): These two api name is really confusing. should be changed.
+     // --- TODO (zxcpoiu): These two api name is really confusing. should be
+     // changed.
      /**
       * flag: Int
       * 0: use default action
@@ -902,13 +927,15 @@
          forceSpeakerOn = flag;
  
          // --- will call updateAudioDeviceState()
-         // --- Note: in some devices, it may not contains specified route thus will not be effected.
+         // --- Note: in some devices, it may not contains specified route thus will not
+         // be effected.
          if (flag == 1) {
              selectAudioDevice(AudioDevice.SPEAKER_PHONE);
          } else if (flag == -1) {
              selectAudioDevice(AudioDevice.EARPIECE); // --- use the most common earpiece to force `speaker off`
          } else {
-             selectAudioDevice(AudioDevice.NONE); // --- NONE will follow default route, the default route of `video` call is speaker.
+             selectAudioDevice(AudioDevice.NONE); // --- NONE will follow default route, the default route of `video`
+                                                  // call is speaker.
          }
      }
  
@@ -916,14 +943,14 @@
  
      @ReactMethod
      public void setMicrophoneMute(final boolean enable) {
-         if (enable != audioManager.isMicrophoneMute())  {
+         if (enable != audioManager.isMicrophoneMute()) {
              Log.d(TAG, "setMicrophoneMute(): " + enable);
              audioManager.setMicrophoneMute(enable);
          }
      }
  
-     /** 
-      * This is part of start() process. 
+     /**
+      * This is part of start() process.
       * ringbackUriType must not empty. empty means do not play.
       */
      @ReactMethod
@@ -957,25 +984,26 @@
              ringbackUri = getRingbackUri(ringbackUriType);
              if (ringbackUri == null) {
                  Log.d(TAG, "startRingback(): no available media");
-                 return;    
+                 return;
              }
  
              mRingback = new myMediaPlayer();
              data.put("sourceUri", ringbackUri);
              data.put("setLooping", true);
  
-             //data.put("audioStream", AudioManager.STREAM_VOICE_CALL); // --- lagacy
+             // data.put("audioStream", AudioManager.STREAM_VOICE_CALL); // --- lagacy
              // --- The ringback doesn't have to be a DTMF.
-             // --- Should use VOICE_COMMUNICATION for sound during call or it may be silenced.
+             // --- Should use VOICE_COMMUNICATION for sound during call or it may be
+             // silenced.
              data.put("audioUsage", AudioAttributes.USAGE_VOICE_COMMUNICATION);
              data.put("audioContentType", AudioAttributes.CONTENT_TYPE_MUSIC);
  
-             setMediaPlayerEvents((MediaPlayer)mRingback, "mRingback");
+             setMediaPlayerEvents((MediaPlayer) mRingback, "mRingback");
  
              mRingback.startPlay(data);
-         } catch(Exception e) {
+         } catch (Exception e) {
              Log.d(TAG, "startRingback() failed", e);
-         }   
+         }
      }
  
      @ReactMethod
@@ -985,13 +1013,13 @@
                  mRingback.stopPlay();
                  mRingback = null;
              }
-         } catch(Exception e) {
+         } catch (Exception e) {
              Log.d(TAG, "stopRingback() failed");
-         }   
+         }
      }
  
-     /** 
-      * This is part of start() process. 
+     /**
+      * This is part of start() process.
       * busytoneUriType must not empty. empty means do not play.
       * return false to indicate play tone failed and should be stop() immediately
       * otherwise, it will stop() after a tone completed.
@@ -1025,25 +1053,26 @@
              busytoneUri = getBusytoneUri(busytoneUriType);
              if (busytoneUri == null) {
                  Log.d(TAG, "startBusytone(): no available media");
-                 return false;    
+                 return false;
              }
  
              mBusytone = new myMediaPlayer();
  
              data.put("sourceUri", busytoneUri);
              data.put("setLooping", false);
-             //data.put("audioStream", AudioManager.STREAM_VOICE_CALL); // --- lagacy
-             // --- Should use VOICE_COMMUNICATION for sound during a call or it may be silenced.
+             // data.put("audioStream", AudioManager.STREAM_VOICE_CALL); // --- lagacy
+             // --- Should use VOICE_COMMUNICATION for sound during a call or it may be
+             // silenced.
              data.put("audioUsage", AudioAttributes.USAGE_VOICE_COMMUNICATION);
              data.put("audioContentType", AudioAttributes.CONTENT_TYPE_SONIFICATION); // --- CONTENT_TYPE_MUSIC?
  
-             setMediaPlayerEvents((MediaPlayer)mBusytone, "mBusytone");
+             setMediaPlayerEvents((MediaPlayer) mBusytone, "mBusytone");
              mBusytone.startPlay(data);
              return true;
-         } catch(Exception e) {
+         } catch (Exception e) {
              Log.d(TAG, "startBusytone() failed", e);
              return false;
-         }   
+         }
      }
  
      public void stopBusytone() {
@@ -1052,9 +1081,9 @@
                  mBusytone.stopPlay();
                  mBusytone = null;
              }
-         } catch(Exception e) {
+         } catch (Exception e) {
              Log.d(TAG, "stopBusytone() failed");
-         }   
+         }
      }
  
      @ReactMethod
@@ -1075,8 +1104,8 @@
                          }
                      }
  
-                     //if (!audioManager.isStreamMute(AudioManager.STREAM_RING)) {
-                     //if (origRingerMode == AudioManager.RINGER_MODE_NORMAL) {
+                     // if (!audioManager.isStreamMute(AudioManager.STREAM_RING)) {
+                     // if (origRingerMode == AudioManager.RINGER_MODE_NORMAL) {
                      if (audioManager.getStreamVolume(AudioManager.STREAM_RING) == 0) {
                          Log.d(TAG, "startRingtone(): ringer is silent. leave without play.");
                          return;
@@ -1103,8 +1132,9 @@
                      data.put("sourceUri", ringtoneUri);
                      data.put("setLooping", true);
  
-                     //data.put("audioStream", AudioManager.STREAM_RING); // --- lagacy
-                     data.put("audioUsage", AudioAttributes.USAGE_NOTIFICATION_RINGTONE); // --- USAGE_NOTIFICATION_COMMUNICATION_REQUEST?
+                     // data.put("audioStream", AudioManager.STREAM_RING); // --- lagacy
+                     data.put("audioUsage", AudioAttributes.USAGE_NOTIFICATION_RINGTONE); // ---
+                                                                                          // USAGE_NOTIFICATION_COMMUNICATION_REQUEST?
                      data.put("audioContentType", AudioAttributes.CONTENT_TYPE_MUSIC);
  
                      setMediaPlayerEvents((MediaPlayer) mRingtone, "mRingtone");
@@ -1116,9 +1146,12 @@
                          mRingtoneCountDownHandler.postDelayed(new Runnable() {
                              public void run() {
                                  try {
-                                     Log.d(TAG, String.format("mRingtoneCountDownHandler.stopRingtone() timeout after %d seconds", seconds));
+                                     Log.d(TAG,
+                                             String.format(
+                                                     "mRingtoneCountDownHandler.stopRingtone() timeout after %d seconds",
+                                                     seconds));
                                      stopRingtone();
-                                 } catch(Exception e) {
+                                 } catch (Exception e) {
                                      Log.d(TAG, "mRingtoneCountDownHandler.stopRingtone() failed.");
                                  }
                              }
@@ -1126,7 +1159,7 @@
                      }
  
                      Looper.loop();
-                 } catch(Exception e) {
+                 } catch (Exception e) {
                      wakeLockUtils.releasePartialWakeLock();
                      Log.e(TAG, "startRingtone() failed", e);
                  }
@@ -1164,23 +1197,25 @@
      private void setMediaPlayerEvents(MediaPlayer mp, final String name) {
  
          mp.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-             //http://developer.android.com/reference/android/media/MediaPlayer.OnErrorListener.html
+             // http://developer.android.com/reference/android/media/MediaPlayer.OnErrorListener.html
              @Override
              public boolean onError(MediaPlayer mp, int what, int extra) {
                  Log.d(TAG, String.format("MediaPlayer %s onError(). what: %d, extra: %d", name, what, extra));
-                 //return True if the method handled the error
-                 //return False, or not having an OnErrorListener at all, will cause the OnCompletionListener to be called. Get news & tips 
+                 // return True if the method handled the error
+                 // return False, or not having an OnErrorListener at all, will cause the
+                 // OnCompletionListener to be called. Get news & tips
                  return true;
              }
          });
  
          mp.setOnInfoListener(new MediaPlayer.OnInfoListener() {
-             //http://developer.android.com/reference/android/media/MediaPlayer.OnInfoListener.html
+             // http://developer.android.com/reference/android/media/MediaPlayer.OnInfoListener.html
              @Override
              public boolean onInfo(MediaPlayer mp, int what, int extra) {
                  Log.d(TAG, String.format("MediaPlayer %s onInfo(). what: %d, extra: %d", name, what, extra));
-                 //return True if the method handled the info
-                 //return False, or not having an OnInfoListener at all, will cause the info to be discarded.
+                 // return True if the method handled the info
+                 // return False, or not having an OnInfoListener at all, will cause the info to
+                 // be discarded.
                  return true;
              }
          });
@@ -1188,14 +1223,15 @@
          mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
              @Override
              public void onPrepared(MediaPlayer mp) {
-                 Log.d(TAG, String.format("MediaPlayer %s onPrepared(), start play, isSpeakerPhoneOn %b", name, audioManager.isSpeakerphoneOn()));
+                 Log.d(TAG, String.format("MediaPlayer %s onPrepared(), start play, isSpeakerPhoneOn %b", name,
+                         audioManager.isSpeakerphoneOn()));
                  if (name.equals("mBusytone")) {
                      audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
                  } else if (name.equals("mRingback")) {
                      audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
                  } else if (name.equals("mRingtone")) {
                      audioManager.setMode(AudioManager.MODE_RINGTONE);
-                 } 
+                 }
                  updateAudioRoute();
                  mp.start();
              }
@@ -1214,8 +1250,7 @@
  
      }
  
- 
- // ===== File Uri Start =====
+     // ===== File Uri Start =====
      @ReactMethod
      public void getAudioUriJS(String audioType, String fileType, Promise promise) {
          Uri result = null;
@@ -1241,51 +1276,58 @@
          final String fileBundle = "incallmanager_ringtone";
          final String fileBundleExt = "mp3";
          final String fileSysWithExt = "media_volume.ogg";
-         final String fileSysPath = "/system/media/audio/ui"; // --- every devices all ships with different in ringtone. maybe ui sounds are more "stock"
+         final String fileSysPath = "/system/media/audio/ui"; // --- every devices all ships with different in ringtone.
+                                                              // maybe ui sounds are more "stock"
          String type;
          // --- _type MAY be empty
-         if (_type.equals("_DEFAULT_") ||  _type.isEmpty()) {
-             //type = fileSysWithExt;
+         if (_type.equals("_DEFAULT_") || _type.isEmpty()) {
+             // type = fileSysWithExt;
              return getDefaultUserUri("defaultRingtoneUri");
          } else {
              type = _type;
          }
-         return getAudioUri(type, fileBundle, fileBundleExt, fileSysWithExt, fileSysPath, "bundleRingtoneUri", "defaultRingtoneUri");
+         return getAudioUri(type, fileBundle, fileBundleExt, fileSysWithExt, fileSysPath, "bundleRingtoneUri",
+                 "defaultRingtoneUri");
      }
  
      private Uri getRingbackUri(final String _type) {
          final String fileBundle = "incallmanager_ringback";
          final String fileBundleExt = "mp3";
          final String fileSysWithExt = "media_volume.ogg";
-         final String fileSysPath = "/system/media/audio/ui"; // --- every devices all ships with different in ringtone. maybe ui sounds are more "stock"
+         final String fileSysPath = "/system/media/audio/ui"; // --- every devices all ships with different in ringtone.
+                                                              // maybe ui sounds are more "stock"
          String type;
          // --- _type would never be empty here. just in case.
-         if (_type.equals("_DEFAULT_") ||  _type.isEmpty()) {
-             //type = fileSysWithExt;
+         if (_type.equals("_DEFAULT_") || _type.isEmpty()) {
+             // type = fileSysWithExt;
              return getDefaultUserUri("defaultRingbackUri");
          } else {
              type = _type;
          }
-         return getAudioUri(type, fileBundle, fileBundleExt, fileSysWithExt, fileSysPath, "bundleRingbackUri", "defaultRingbackUri");
+         return getAudioUri(type, fileBundle, fileBundleExt, fileSysWithExt, fileSysPath, "bundleRingbackUri",
+                 "defaultRingbackUri");
      }
  
      private Uri getBusytoneUri(final String _type) {
          final String fileBundle = "incallmanager_busytone";
          final String fileBundleExt = "mp3";
          final String fileSysWithExt = "LowBattery.ogg";
-         final String fileSysPath = "/system/media/audio/ui"; // --- every devices all ships with different in ringtone. maybe ui sounds are more "stock"
+         final String fileSysPath = "/system/media/audio/ui"; // --- every devices all ships with different in ringtone.
+                                                              // maybe ui sounds are more "stock"
          String type;
          // --- _type would never be empty here. just in case.
-         if (_type.equals("_DEFAULT_") ||  _type.isEmpty()) {
-             //type = fileSysWithExt; // --- 
+         if (_type.equals("_DEFAULT_") || _type.isEmpty()) {
+             // type = fileSysWithExt; // ---
              return getDefaultUserUri("defaultBusytoneUri");
          } else {
              type = _type;
          }
-         return getAudioUri(type, fileBundle, fileBundleExt, fileSysWithExt, fileSysPath, "bundleBusytoneUri", "defaultBusytoneUri");
+         return getAudioUri(type, fileBundle, fileBundleExt, fileSysWithExt, fileSysPath, "bundleBusytoneUri",
+                 "defaultBusytoneUri");
      }
  
-     private Uri getAudioUri(final String _type, final String fileBundle, final String fileBundleExt, final String fileSysWithExt, final String fileSysPath, final String uriBundle, final String uriDefault) {
+     private Uri getAudioUri(final String _type, final String fileBundle, final String fileBundleExt,
+             final String fileSysWithExt, final String fileSysPath, final String uriBundle, final String uriDefault) {
          String type = _type;
          if (type.equals("_BUNDLE_")) {
              if (audioUriMap.get(uriBundle) == null) {
@@ -1299,12 +1341,16 @@
                  if (res <= 0) {
                      Log.d(TAG, String.format("getAudioUri() %s.%s not found in bundle.", fileBundle, fileBundleExt));
                      audioUriMap.put(uriBundle, null);
-                     //type = fileSysWithExt;
-                     return getDefaultUserUri(uriDefault); // --- if specified bundle but not found, use default directlly
+                     // type = fileSysWithExt;
+                     return getDefaultUserUri(uriDefault); // --- if specified bundle but not found, use default
+                                                           // directlly
                  } else {
-                     audioUriMap.put(uriBundle, Uri.parse("android.resource://" + mPackageName + "/" + Integer.toString(res)));
-                     //bundleRingtoneUri = Uri.parse("android.resource://" + reactContext.getPackageName() + "/" + R.raw.incallmanager_ringtone);
-                     //bundleRingtoneUri = Uri.parse("android.resource://" + reactContext.getPackageName() + "/raw/incallmanager_ringtone");
+                     audioUriMap.put(uriBundle,
+                             Uri.parse("android.resource://" + mPackageName + "/" + Integer.toString(res)));
+                     // bundleRingtoneUri = Uri.parse("android.resource://" +
+                     // reactContext.getPackageName() + "/" + R.raw.incallmanager_ringtone);
+                     // bundleRingtoneUri = Uri.parse("android.resource://" +
+                     // reactContext.getPackageName() + "/raw/incallmanager_ringtone");
                      Log.d(TAG, "getAudioUri() using: " + type);
                      return audioUriMap.get(uriBundle);
                  }
@@ -1336,7 +1382,8 @@
      }
  
      private Uri getDefaultUserUri(final String type) {
-         // except ringtone, it doesn't suppose to be go here. and every android has different files unlike apple;
+         // except ringtone, it doesn't suppose to be go here. and every android has
+         // different files unlike apple;
          if (type.equals("defaultRingtoneUri")) {
              return Settings.System.DEFAULT_RINGTONE_URI;
          } else if (type.equals("defaultRingbackUri")) {
@@ -1347,17 +1394,17 @@
              return Settings.System.DEFAULT_NOTIFICATION_URI;
          }
      }
- // ===== File Uri End =====
+     // ===== File Uri End =====
  
- 
- // ===== Internal Classes Start =====
+     // ===== Internal Classes Start =====
      private class myToneGenerator extends Thread implements MyPlayerInterface {
          private int toneType;
          private int toneCategory;
          private boolean playing = false;
          private static final int maxWaitTimeMs = 3600000; // 1 hour fairly enough
          private static final int loadBufferWaitTimeMs = 20;
-         private static final int toneVolume = 100; // The volume of the tone, given in percentage of maximum volume (from 0-100).
+         private static final int toneVolume = 100; // The volume of the tone, given in percentage of maximum volume
+                                                    // (from 0-100).
          // --- constant in ToneGenerator all below 100
          public static final int BEEP = 101;
          public static final int BUSY = 102;
@@ -1404,21 +1451,21 @@
              int toneWaitTimeMs;
              switch (toneCategory) {
                  case SILENT:
-                     //toneType = ToneGenerator.TONE_CDMA_SIGNAL_OFF;
+                     // toneType = ToneGenerator.TONE_CDMA_SIGNAL_OFF;
                      toneType = ToneGenerator.TONE_CDMA_ANSWER;
                      toneWaitTimeMs = 1000;
                      break;
                  case BUSY:
-                     //toneType = ToneGenerator.TONE_SUP_BUSY;
-                     //toneType = ToneGenerator.TONE_SUP_CONGESTION;
-                     //toneType = ToneGenerator.TONE_SUP_CONGESTION_ABBREV;
-                     //toneType = ToneGenerator.TONE_CDMA_NETWORK_BUSY;
-                     //toneType = ToneGenerator.TONE_CDMA_NETWORK_BUSY_ONE_SHOT;
+                     // toneType = ToneGenerator.TONE_SUP_BUSY;
+                     // toneType = ToneGenerator.TONE_SUP_CONGESTION;
+                     // toneType = ToneGenerator.TONE_SUP_CONGESTION_ABBREV;
+                     // toneType = ToneGenerator.TONE_CDMA_NETWORK_BUSY;
+                     // toneType = ToneGenerator.TONE_CDMA_NETWORK_BUSY_ONE_SHOT;
                      toneType = ToneGenerator.TONE_SUP_RADIO_NOTAVAIL;
                      toneWaitTimeMs = 4000;
                      break;
                  case RINGBACK:
-                     //toneType = ToneGenerator.TONE_SUP_RINGTONE;
+                     // toneType = ToneGenerator.TONE_SUP_RINGTONE;
                      toneType = ToneGenerator.TONE_CDMA_NETWORK_USA_RINGBACK;
                      toneWaitTimeMs = maxWaitTimeMs; // [STOP MANUALLY]
                      break;
@@ -1427,15 +1474,15 @@
                      toneWaitTimeMs = 200; // plays when call ended
                      break;
                  case CALLWAITING:
-                     //toneType = ToneGenerator.TONE_CDMA_NETWORK_CALLWAITING;
+                     // toneType = ToneGenerator.TONE_CDMA_NETWORK_CALLWAITING;
                      toneType = ToneGenerator.TONE_SUP_CALL_WAITING;
                      toneWaitTimeMs = maxWaitTimeMs; // [STOP MANUALLY]
                      break;
                  case BEEP:
-                     //toneType = ToneGenerator.TONE_SUP_PIP;
-                     //toneType = ToneGenerator.TONE_CDMA_PIP;
-                     //toneType = ToneGenerator.TONE_SUP_RADIO_ACK;
-                     //toneType = ToneGenerator.TONE_PROP_BEEP;
+                     // toneType = ToneGenerator.TONE_SUP_PIP;
+                     // toneType = ToneGenerator.TONE_CDMA_PIP;
+                     // toneType = ToneGenerator.TONE_SUP_RADIO_ACK;
+                     // toneType = ToneGenerator.TONE_PROP_BEEP;
                      toneType = ToneGenerator.TONE_PROP_BEEP2;
                      toneWaitTimeMs = 1000; // plays when call ended
                      break;
@@ -1445,7 +1492,8 @@
                      toneType = toneCategory;
                      toneWaitTimeMs = customWaitTimeMs;
              }
-             Log.d(TAG, String.format("myToneGenerator: toneCategory: %d ,toneType: %d, toneWaitTimeMs: %d", toneCategory, toneType, toneWaitTimeMs));
+             Log.d(TAG, String.format("myToneGenerator: toneCategory: %d ,toneType: %d, toneWaitTimeMs: %d",
+                     toneCategory, toneType, toneWaitTimeMs));
  
              ToneGenerator tg;
              try {
@@ -1467,13 +1515,13 @@
                              audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
                          } else if (caller.equals("mRingtone")) {
                              audioManager.setMode(AudioManager.MODE_RINGTONE);
-                         } 
+                         }
                          InCallManagerModule.this.updateAudioRoute();
  
                          tg.startTone(toneType);
                          try {
                              wait(toneWaitTimeMs + loadBufferWaitTimeMs);
-                         } catch  (InterruptedException e) {
+                         } catch (InterruptedException e) {
                              Log.d(TAG, "myToneGenerator stopped. toneType: " + toneType);
                          }
                          tg.stopTone();
@@ -1508,13 +1556,13 @@
                  setLooping((Boolean) data.get("setLooping"));
  
                  // --- the `minSdkVersion` is 21 since RN 64,
-                 // --- if you want to suuport api < 21, comment out `setAudioAttributes` and use `setAudioStreamType((Integer) data.get("audioStream"))` instead
+                 // --- if you want to suuport api < 21, comment out `setAudioAttributes` and use
+                 // `setAudioStreamType((Integer) data.get("audioStream"))` instead
                  setAudioAttributes(
-                     new AudioAttributes.Builder()
-                         .setUsage((Integer) data.get("audioUsage"))
-                         .setContentType((Integer) data.get("audioContentType"))
-                         .build()
-                 );
+                         new AudioAttributes.Builder()
+                                 .setUsage((Integer) data.get("audioUsage"))
+                                 .setContentType((Integer) data.get("audioContentType"))
+                                 .build());
  
                  // -- will start at onPrepared() event
                  prepareAsync();
@@ -1528,7 +1576,7 @@
              return super.isPlaying();
          }
      }
- // ===== Internal Classes End =====
+     // ===== Internal Classes End =====
  
      @ReactMethod
      public void chooseAudioRoute(String audioRoute, Promise promise) {
@@ -1551,7 +1599,7 @@
      public void getSelectedAudioDeviceString(Promise promise) {
          promise.resolve(selectedAudioDevice.name());
      }
-     
+ 
      private static int getRandomInteger(int min, int max) {
          if (min >= max) {
              throw new IllegalArgumentException("max must be greater than min");
@@ -1577,13 +1625,13 @@
      @Override
      public void onHostResume() {
          Log.d(TAG, "onResume()");
-         //resume();
+         // resume();
      }
  
      @Override
      public void onHostPause() {
          Log.d(TAG, "onPause()");
-         //pause();
+         // pause();
      }
  
      @Override
@@ -1602,8 +1650,8 @@
          updateAudioDeviceState();
      }
  
- // ===== NOTE: below functions is based on appRTC DEMO M64 ===== //
-   /** Changes selection of the currently active audio device. */
+     // ===== NOTE: below functions is based on appRTC DEMO M64 ===== //
+     /** Changes selection of the currently active audio device. */
      private void setAudioDeviceInternal(AudioDevice device) {
          Log.d(TAG, "setAudioDeviceInternal(device=" + device + ")");
          if (!audioDevices.contains(device)) {
@@ -1630,8 +1678,6 @@
          }
          selectedAudioDevice = device;
      }
- 
- 
  
      /**
       * Changes default audio device.
@@ -1698,25 +1744,25 @@
  
      /** Sets the speaker phone mode. */
      /*
-     private void setSpeakerphoneOn(boolean on) {
-         boolean wasOn = audioManager.isSpeakerphoneOn();
-         if (wasOn == on) {
-             return;
-         }
-         audioManager.setSpeakerphoneOn(on);
-     }
-     */
+      * private void setSpeakerphoneOn(boolean on) {
+      * boolean wasOn = audioManager.isSpeakerphoneOn();
+      * if (wasOn == on) {
+      * return;
+      * }
+      * audioManager.setSpeakerphoneOn(on);
+      * }
+      */
  
      /** Sets the microphone mute state. */
      /*
-     private void setMicrophoneMute(boolean on) {
-         boolean wasMuted = audioManager.isMicrophoneMute();
-         if (wasMuted == on) {
-             return;
-         }
-         audioManager.setMicrophoneMute(on);
-     }
-     */
+      * private void setMicrophoneMute(boolean on) {
+      * boolean wasMuted = audioManager.isMicrophoneMute();
+      * if (wasMuted == on) {
+      * return;
+      * }
+      * audioManager.setMicrophoneMute(on);
+      * }
+      */
  
      /** Gets the current earpiece state. */
      private boolean hasEarpiece() {
@@ -1764,12 +1810,12 @@
      public void updateAudioDeviceState() {
          UiThreadUtil.runOnUiThread(() -> {
              Log.d(TAG, ">>>>>>>>>>>>>>>>>>>>>--- updateAudioDeviceState: "
-                             + "wired headset=" + hasWiredHeadset + ", "
-                             + "BT state=" + bluetoothManager.getState());
+                     + "wired headset=" + hasWiredHeadset + ", "
+                     + "BT state=" + bluetoothManager.getState());
              Log.d(TAG, "Device status: "
-                             + "available=" + audioDevices + ", "
-                             + "selected=" + selectedAudioDevice + ", "
-                             + "user selected=" + userSelectedAudioDevice);
+                     + "available=" + audioDevices + ", "
+                     + "selected=" + selectedAudioDevice + ", "
+                     + "user selected=" + userSelectedAudioDevice);
  
              // Check if any Bluetooth headset is connected. The internal BT state will
              // change accordingly.
@@ -1810,7 +1856,9 @@
              // Store state which is set to true if the device list has changed.
              boolean audioDeviceSetUpdated = !audioDevices.equals(newAudioDevices);
  
-             if(audioDeviceSetUpdated && newAudioDevices.contains(AudioDevice.BLUETOOTH) && !audioDevices.contains(AudioDevice.BLUETOOTH)) allowManualSpeaker = false;
+             if (audioDeviceSetUpdated && newAudioDevices.contains(AudioDevice.BLUETOOTH)
+                     && !audioDevices.contains(AudioDevice.BLUETOOTH))
+                 allowManualSpeaker = false;
  
              // Update the existing audio device set.
              audioDevices = newAudioDevices;
@@ -1859,14 +1907,14 @@
                  // Do the required device switch.
                  setAudioDeviceInternal(newAudioDevice);
                  Log.d(TAG, "New device status: "
-                                 + "available=" + audioDevices + ", "
-                                 + "selected=" + newAudioDevice);
+                         + "available=" + audioDevices + ", "
+                         + "selected=" + newAudioDevice);
                  /*
-                 if (audioManagerEvents != null) {
-                     // Notify a listening client that audio device has been changed.
-                     audioManagerEvents.onAudioDeviceChanged(selectedAudioDevice, audioDevices);
-                 }
-                 */
+                  * if (audioManagerEvents != null) {
+                  * // Notify a listening client that audio device has been changed.
+                  * audioManagerEvents.onAudioDeviceChanged(selectedAudioDevice, audioDevices);
+                  * }
+                  */
                  sendEvent("onAudioDeviceChanged", getAudioDeviceStatusMap());
              }
              Log.d(TAG, "--- updateAudioDeviceState done");
@@ -1876,7 +1924,7 @@
      private WritableMap getAudioDeviceStatusMap() {
          WritableMap data = Arguments.createMap();
          String audioDevicesJson = "[";
-         for (AudioDevice s: audioDevices) {
+         for (AudioDevice s : audioDevices) {
              audioDevicesJson += "\"" + s.name() + "\",";
          }
  
@@ -1888,9 +1936,11 @@
  
          data.putString("availableAudioDeviceList", audioDevicesJson);
          data.putString("selectedAudioDevice", (selectedAudioDevice == null) ? "" : selectedAudioDevice.name());
-         // data.putString("stoppedBluetoothSCO", (stoppedBluetoothSCO && !allowManualSpeaker) ? "true" : "false");
+         // data.putString("stoppedBluetoothSCO", (stoppedBluetoothSCO &&
+         // !allowManualSpeaker) ? "true" : "false");
  
-         if(allowManualSpeaker) allowManualSpeaker = false;
+         if (allowManualSpeaker)
+             allowManualSpeaker = false;
  
          return data;
      }
@@ -1903,7 +1953,11 @@
          final AudioDevice newAudioDevice;
          Log.d(TAG, "audioDevices here::::::::::::::::::::" + audioDevices);
  
-         if (userSelectedAudioDevice != null && userSelectedAudioDevice != AudioDevice.NONE && !((userSelectedAudioDevice == AudioDevice.EARPIECE || (userSelectedAudioDevice == AudioDevice.SPEAKER_PHONE && !allowManualSpeaker)) && (audioDevices.contains(AudioDevice.BLUETOOTH) || audioDevices.contains(AudioDevice.WIRED_HEADSET)))) {
+         if (userSelectedAudioDevice != null && userSelectedAudioDevice != AudioDevice.NONE
+                 && !((userSelectedAudioDevice == AudioDevice.EARPIECE
+                         || (userSelectedAudioDevice == AudioDevice.SPEAKER_PHONE && !allowManualSpeaker))
+                         && (audioDevices.contains(AudioDevice.BLUETOOTH)
+                                 || audioDevices.contains(AudioDevice.WIRED_HEADSET)))) {
              newAudioDevice = userSelectedAudioDevice;
              Log.d(TAG, "1111111111111111111111 SETTTTTTTTTTTTTTTTTTTTT");
          } else if (!skipBluetooth && audioDevices.contains(AudioDevice.BLUETOOTH)) {
@@ -1913,7 +1967,8 @@
              newAudioDevice = AudioDevice.BLUETOOTH;
              Log.d(TAG, "2222222222222222222 SETTTTTTTTTTTTTTTTTTTTT");
          } else if (audioDevices.contains(AudioDevice.WIRED_HEADSET)) {
-             // If a wired headset is connected, but Bluetooth is not, then wired headset is used as
+             // If a wired headset is connected, but Bluetooth is not, then wired headset is
+             // used as
              // audio device.
              Log.d(TAG, "wired_headset SETTTTTTTTTTTTTTTTTTTTT");
              newAudioDevice = AudioDevice.WIRED_HEADSET;
@@ -1924,10 +1979,8 @@
              newAudioDevice = AudioDevice.SPEAKER_PHONE;
              Log.d(TAG, "55555555555555555555 SETTTTTTTTTTTTTTTTTTTTT");
          }
-         
  
          return newAudioDevice;
      }
  }
- 
  
