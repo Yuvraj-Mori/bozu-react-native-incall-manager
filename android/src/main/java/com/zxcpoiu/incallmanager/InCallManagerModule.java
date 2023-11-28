@@ -575,7 +575,14 @@
              // TODO: even if not acquired focus, we can still play sounds. but need figure out which is better.
              //getCurrentActivity().setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
              audioManager.setMode(defaultAudioMode);
-             setSpeakerphoneOn(defaultSpeakerOn);
+
+             /** below line is commented because this is handled manually for init
+              * also setting speakerphone on causes side effect to 
+              * bluetooth connection on android 13 devices causing it to 
+              * disconnect automatically after speaker init preventing auto-routing
+              * when bluetooth device is already connected during init.
+              */
+             // setSpeakerphoneOn(defaultSpeakerOn);
              setMicrophoneMute(false);
              forceSpeakerOn = 0;
              hasWiredHeadset = hasWiredHeadset();
@@ -871,8 +878,11 @@
          allowManualSpeaker = true;
          if (enable != audioManager.isSpeakerphoneOn())  {
              Log.d(TAG, "setSpeakerphoneOn(): " + enable);
-         audioManager.setMode(defaultAudioMode);
+             audioManager.setMode(defaultAudioMode);
              audioManager.setSpeakerphoneOn(enable);
+         }
+         if (enable == false && audioDevices.contains(AudioDevice.BLUETOOTH)) {
+             this.chooseAudioRoute("BLUETOOTH", null);
          }
      }
  
@@ -1533,7 +1543,8 @@
          } else if (audioRoute.equals(AudioDevice.BLUETOOTH.name())) {
              selectAudioDevice(AudioDevice.BLUETOOTH);
          }
-         promise.resolve(getAudioDeviceStatusMap());
+         if (promise != null)
+             promise.resolve(getAudioDeviceStatusMap());
      }
  
      @ReactMethod
@@ -1810,13 +1821,12 @@
              if (selectedAudioDevice == AudioDevice.BLUETOOTH
                      && newAudioDevice != AudioDevice.BLUETOOTH
                      && (bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTED
-                         || bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTING)
-                     ) {
-                         Log.d(TAG, "STOPPING SCO from updateAudioDeviceState");
+                             || bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTING)) {
+                 Log.d(TAG, "updateAudioDeviceState(): STOPPING SCO due to new prefered device is not bluetooth");
                  bluetoothManager.stopScoAudio();
                  bluetoothManager.updateDevice();
-                 //stoppedBluetoothSCO = true;
-             } //else stoppedBluetoothSCO = false;
+                 // stoppedBluetoothSCO = true;
+             } // else stoppedBluetoothSCO = false;
  
              // --- start bluetooth if needed
              if (selectedAudioDevice != AudioDevice.BLUETOOTH
@@ -1826,6 +1836,8 @@
                  if (!bluetoothManager.startScoAudio()) {
                      // Remove BLUETOOTH from list of available devices since SCO failed.
                      audioDevices.remove(AudioDevice.BLUETOOTH);
+                     Log.d(TAG,
+                             "updateAudioDeviceState(): removed device due to startSCO failed; calling getPreferredAudioDevice again...");
                      audioDeviceSetUpdated = true;
                      if (userSelectedAudioDevice == AudioDevice.BLUETOOTH) {
                          userSelectedAudioDevice = AudioDevice.NONE;
@@ -1833,9 +1845,11 @@
                      newAudioDevice = getPreferredAudioDevice();
                  }
              }
-             
+ 
              if (newAudioDevice == AudioDevice.BLUETOOTH
                      && bluetoothManager.getState() != AppRTCBluetoothManager.State.SCO_CONNECTED) {
+                 Log.d(TAG,
+                         "updateAudioDeviceState(): calling getPreferredAudioDevice with skip true due to bluetooth state is not SCO_connected");
                  newAudioDevice = getPreferredAudioDevice(true); // --- skip bluetooth
              }
  

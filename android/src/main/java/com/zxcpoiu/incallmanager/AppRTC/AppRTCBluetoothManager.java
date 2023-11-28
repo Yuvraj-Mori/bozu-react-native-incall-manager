@@ -119,7 +119,7 @@ public class AppRTCBluetoothManager {
       // Android only supports one connected Bluetooth Headset at a time.
       bluetoothHeadset = (BluetoothHeadset) proxy;
       updateAudioDeviceState("service-conn");
-      Log.d(TAG, "onServiceConnected done: BT state=" + bluetoothState);
+      Log.d(TAG, "onServiceConnected done: BT state=" + bluetoothState + "bluetooth headset: " + bluetoothHeadset);
     }
 
     @Override
@@ -177,7 +177,8 @@ public class AppRTCBluetoothManager {
         needChange = true;
       } else if (bluetoothAudioDevice == null && newBtDevice != null) {
         needChange = true;
-      } else if (bluetoothAudioDevice != null && newBtDevice != null && bluetoothAudioDevice.getId() != newBtDevice.getId()) {
+      } else if (bluetoothAudioDevice != null && newBtDevice != null
+          && bluetoothAudioDevice.getId() != newBtDevice.getId()) {
         needChange = true;
         Log.d(TAG, "updateDeviceList after onAudioDevicesRemoved newbtdevice: " + newBtDevice);
       } else if (newBtDevice != null) {

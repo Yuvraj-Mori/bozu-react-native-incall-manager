@@ -59,6 +59,7 @@
     BOOL _audioSessionInitialized;
     int _forceSpeakerOn;
     NSString *_media;
+    BOOL _audioCategoryUpdatedViaOwnMethod;
 }
 
 + (BOOL)requiresMainQueueSetup
@@ -109,6 +110,7 @@ RCT_EXPORT_MODULE(InCallManager)
         _audioSessionInitialized = NO;
         _forceSpeakerOn = 0;
         _media = @"audio";
+        _audioCategoryUpdatedViaOwnMethod = NO;
 
         NSLog(@"RNInCallManager.init(): initialized");
     }
@@ -145,6 +147,7 @@ RCT_EXPORT_METHOD(start:(NSString *)mediaType
     NSLog(@"RNInCallManager.start() start InCallManager. media=%@, type=%@, mode=%@, options=%lu", _media, _media, _incallAudioMode, (unsigned long)_incallAudioCategoryOptions);
     [self storeOriginalAudioSetup];
     _forceSpeakerOn = 0;
+    _audioCategoryUpdatedViaOwnMethod = NO;
     [self startAudioSessionNotification];
     [self audioSessionSetCategory:_incallAudioCategory
                           options:_incallAudioCategoryOptions
@@ -193,6 +196,7 @@ RCT_EXPORT_METHOD(stop:(NSString *)busytoneUriType)
         [[NSNotificationCenter defaultCenter] removeObserver:self];
         _forceSpeakerOn = 0;
         _audioSessionInitialized = NO;
+        _audioCategoryUpdatedViaOwnMethod = NO;
     }
 }
 
@@ -505,6 +509,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
     // }
     NSLog(@"RNInCallManager.updateAudioRoute() audiocategory option includes mixmode %lu", _audioSession.categoryOptions & _incallAudioCategoryOptions);
     if ([_audioSession.category isEqualToString:_incallAudioCategory] && !(_audioSession.categoryOptions & _incallAudioCategoryOptions)) {
+        _audioCategoryUpdatedViaOwnMethod = YES;
         [self audioSessionSetCategory:_incallAudioCategory
                               options:_incallAudioCategoryOptions
                            callerMemo:NSStringFromSelector(_cmd)];
@@ -514,6 +519,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
     }
     
     if (audioMode.length > 0 && ![_audioSession.mode isEqualToString:audioMode]) {
+        _audioCategoryUpdatedViaOwnMethod = YES;
         [self audioSessionSetMode:audioMode
                        callerMemo:NSStringFromSelector(_cmd)];
         NSLog(@"RNInCallManager.updateAudioRoute() audio mode has changed to %@", audioMode);
@@ -840,6 +846,7 @@ RCT_EXPORT_METHOD(stopProximitySensor)
                     break;
                 case AVAudioSessionRouteChangeReasonOldDeviceUnavailable:
                     NSLog(@"RNInCallManager.AudioRouteChange.Reason: OldDeviceUnavailable");
+                    [self setForceSpeakerphoneOn:@1];
                     if (![self isWiredHeadsetPluggedIn]) {
                         [self sendEventWithName:@"WiredHeadset"
                                            body:@{
@@ -851,10 +858,13 @@ RCT_EXPORT_METHOD(stopProximitySensor)
                     break;
                 case AVAudioSessionRouteChangeReasonCategoryChange:
                     NSLog(@"RNInCallManager.AudioRouteChange.Reason: CategoryChange. category=%@ mode=%@, options=%lu", self->_audioSession.category, self->_audioSession.mode, (unsigned long)self->_audioSession.categoryOptions);
-                    [self updateAudioRoute];
+                    if(!_audioCategoryUpdatedViaOwnMethod) [self updateAudioRoute];
+                    else _audioCategoryUpdatedViaOwnMethod = NO;
                     break;
                 case AVAudioSessionRouteChangeReasonOverride:
-                    NSLog(@"RNInCallManager.AudioRouteChange.Reason: Override");
+                    if(routeChangeTypeValue == 4 && ![self checkAudioRoute:@[AVAudioSessionPortBuiltInSpeaker]
+                                               routeType:@"output"]) [self setForceSpeakerphoneOn:@1];
+                    NSLog(@"RNInCallManager.AudioRouteChange.Reason: Override routechangetypevalue: %d", routeChangeTypeValue);
                     break;
                 case AVAudioSessionRouteChangeReasonWakeFromSleep:
                     NSLog(@"RNInCallManager.AudioRouteChange.Reason: WakeFromSleep");
